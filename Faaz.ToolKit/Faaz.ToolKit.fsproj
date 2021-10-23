@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net5.0</TargetFramework>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <WarnOn>3390;$(WarnOn)</WarnOn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Library.fs" />
+        <Compile Include="Data\S3.fs" />
+        <Compile Include="Dev\DotNet.fs" />
+        <Compile Include="Dev\Git.fs" />
+        <Compile Include="Dev\BuildPipeline.fs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Faaz\Faaz.fsproj" />
+    </ItemGroup>
+
+</Project>
