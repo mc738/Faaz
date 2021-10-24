@@ -38,9 +38,6 @@ module DotNet =
               | None -> ""
               $"/p:InformationalVersion={getBuildName context}" ]
             |> (fun a -> String.Join(' ', a))
-
-        printfn $"{args}"
-        printfn $"{getSrcPath context}"
         //let args =
         
         //    "publish --configuration Release --output {output} /p:VersionPrefix={}.{}.{}"
@@ -62,8 +59,6 @@ module DotNet =
               $"--logger \"trx;logfilename={testName}.xml\""
               $"-r {getTestsPath context}" ]
             |> (fun a -> String.Join(' ', a))
-
-        printfn $"{args}"
         //let args =
         //    "publish --configuration Release --output {output} /p:VersionPrefix={}.{}.{}"
 
@@ -80,4 +75,3 @@ module DotNet =
             let errorMessage = String.Join(Environment.NewLine, errors)
             context.LogError("dot-net-test", $"Tests failed. Error: {errorMessage}")            
             Error (String.Join(Environment.NewLine, errors))
-

@@ -197,26 +197,29 @@ module ScriptHost =
         FsiEvaluationSession.Create(fsiConfig, allArgs, inStream, outStream, errStream)
 
     let eval<'T> (path: string) (name: string) (fsi: FsiEvaluationSession) =
-        match fsi.EvalScriptNonThrowing path with
-        | Choice1Of2 _, diagnostics ->
-            printfn $"Evaluate script diagnostics: {diagnostics}"
-
-            match fsi.EvalExpressionNonThrowing name with
-            | Choice1Of2 r, diagnostics ->
+        try
+            match fsi.EvalScriptNonThrowing path with
+            | Choice1Of2 _, diagnostics ->
                 printfn $"Evaluate script diagnostics: {diagnostics}"
-                printfn $"Evaluate expression diagnostics: {diagnostics}"
-                //printfn $"Result: {r}"
-                r
-                |> Option.bind (fun v -> v.ReflectionValue |> unbox<'T> |> Ok |> Some)
-                |> Option.defaultValue (Result.Error "No result")
+
+                match fsi.EvalExpressionNonThrowing name with
+                | Choice1Of2 r, diagnostics ->
+                    printfn $"Evaluate script diagnostics: {diagnostics}"
+                    printfn $"Evaluate expression diagnostics: {diagnostics}"
+                    //printfn $"Result: {r}"
+                    r
+                    |> Option.bind (fun v -> v.ReflectionValue |> unbox<'T> |> Ok |> Some)
+                    |> Option.defaultValue (Result.Error "No result")
+                | Choice2Of2 exn, diagnostics ->
+                    printfn $"Error evaluating expression: {exn.Message}"
+                    printfn $"Evaluate expression diagnostics: {diagnostics}"
+                    Result.Error exn.Message
             | Choice2Of2 exn, diagnostics ->
-                printfn $"Error evaluating expression: {exn.Message}"
-                printfn $"Evaluate expression diagnostics: {diagnostics}"
+                printfn $"Error evaluating script: {exn.Message}"
+                printfn $"Evaluate script diagnostics: {diagnostics}"
                 Result.Error exn.Message
-        | Choice2Of2 exn, diagnostics ->
-            printfn $"Error evaluating script: {exn.Message}"
-            printfn $"Evaluate script diagnostics: {diagnostics}"
-            Result.Error exn.Message
+        with
+        | exn -> Error $"Unhandled error: {exn.Message}"
 
     type HostContext =
         { FsiSession: FsiEvaluationSession }

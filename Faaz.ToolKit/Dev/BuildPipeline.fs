@@ -3,8 +3,10 @@
 open System
 open System.IO
 open System.Text.Json.Serialization
+open FStore.S3
 open Faaz
-
+open Faaz.ToolKit.Data
+open Faaz.Utils
 [<RequireQualifiedAccess>]
 module BuildPipeline =
 
@@ -84,6 +86,7 @@ module BuildPipeline =
             $"{bs.Name}-{bs.GetVersion()}{vs}+{bs.GetLastCommitSlug()}.win-x86"
 
     type Context = { Script: ScriptContext; Stats: Stats }
+    
     let getTestPath (sc: ScriptContext) = sc.GetValue("tests-dir", "")
     let getPublishPath (sc: ScriptContext) = sc.GetValue("publish-dir", "")
     let getResourcePath (sc: ScriptContext) = sc.GetValue("resource-dir", "")
@@ -94,6 +97,11 @@ module BuildPipeline =
 
     let getArtifactsPath (sc: ScriptContext) = sc.GetValue("artifacts-dir", "")
 
+    let getBuildArtifactName (bc: Context) = Path.Combine(bc.Script.BasePath, $"{bc.Stats.Name}.zip") 
+    
+    let tmpPath (sc: ScriptContext) = Path.Combine(sc.BasePath, ".tmp")
+
+    
     let initializeDirectory (config: Configuration) basePath =
         printfn $"Initializing build directory (path: {basePath})."
 
@@ -274,4 +282,48 @@ module BuildPipeline =
         | Some e ->
             bc.Script.LogError("build-pipeline", $"Publish error: {e}")
             Error e
+    
+    let createZip (bc: Context) =
+        let targetPath = tmpPath bc.Script
+        let zipPath = Path.Combine(bc.Script.BasePath, $"{bc.Stats.Name}.zip")
+        bc.Script.Log("build-pipeline", $"Creating zip `{zipPath}` from `{targetPath}`")
+        match attempt (fun _ -> Compression.zip targetPath zipPath) with
+        | Ok _ -> Ok bc
+        | Error e ->
+            bc.Script.LogWarning("build-pipleline", $"Zip failed. Error: {e}")
+            Ok bc
+            
+    let createBuildArtifact (bc: Context) =
+        let artifactPath = tmpPath bc.Script
+        
+        bc.Script.Log("build-pipeline", $"Creating build artifact from `{artifactPath}`")
+        match Artifact.create artifactPath bc.Script.BasePath $"{bc.Stats.Name}.build" with
+        | Ok path ->
+            bc.Script.Log("build-pipeline", $"Artifact `{bc.Stats.Name}.build` created.")                    
+            //bc.Script.Log("build-pipeline", $"Cleaning up build. Deleting `{artifactPath}`.")                    
+            //Directory.Delete(artifactPath, true)
+            Ok bc
+        | Error e -> Error e
 
+    let uploadBuildArtifact (bc: Context) =
+        match bc.Script.TryGetValue("s3-config-path"), bc.Script.TryGetValue("s3-config-bucket")  with
+        | Some s3Path, Some bucket ->
+            match S3Context.Create(s3Path) with
+            | Ok s3 ->
+                bc.Script.Log("build-pipeline", $"S3 context loaded. Uploading to `{s3.Configuration.ServiceUrl}` (Bucket: {bucket})")
+                s3.UploadObject(bucket, bc.Stats.Name, getBuildArtifactName bc) |> Async.RunSynchronously
+                Ok bc
+            | Error e ->
+                bc.Script.LogError("build-pipeline", $"Error loading s3 context. Path: {s3Path}")
+                Error e
+        | None, _ -> Error "Missing `s3-config-path` value. Try adding as an arg."
+        | _, None -> Error "Missing `s3-config-bucket` value. Try adding as an arg."
+        
+    let cleanUp (bc: Context) =
+        match attempt (fun _ -> Directory.Delete(tmpPath bc.Script, true)) with
+        | Ok _ -> Ok bc
+        | Error e ->
+            bc.Script.LogWarning("build-pipleline", $"Clean up failed. Error: {e}")
+            Ok bc
+            
+        

@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <Compile Include="Library.fs" />
+        <Compile Include="Data\Artifact.fs" />
         <Compile Include="Data\S3.fs" />
         <Compile Include="Dev\DotNet.fs" />
         <Compile Include="Dev\Git.fs" />
@@ -15,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\FStore\FStore\FStore.fsproj" />
       <ProjectReference Include="..\Faaz\Faaz.fsproj" />
     </ItemGroup>
 

@@ -12,6 +12,7 @@
         <Compile Include="Json.fs" />
         <Compile Include="IO.fs" />
         <Compile Include="Process.fs" />
+        <Compile Include="Utils.fs" />
     </ItemGroup>
 
     <ItemGroup>

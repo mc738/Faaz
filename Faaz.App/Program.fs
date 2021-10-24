@@ -12,8 +12,12 @@ let from whom =
 let main argv =
     let fsi = ScriptHost.fsiSession ()
     
+    //match S3Context.Create("")
+    
     match ScriptHost.eval<int> "C:\\Users\\44748\\Projects\\Faaz\\Scripts\\BuildScripts.fsx" "BuildScripts.FDOM.run" fsi with
-    | Ok _ -> 0
+    | Ok _ ->
+        
+        0
     | Error e ->
         printfn $"Error: {e}"
         -1
