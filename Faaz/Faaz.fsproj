@@ -18,10 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\Freql\Freql.Sqlite\Freql.Sqlite.fsproj" />
-    </ItemGroup>
-
-    <ItemGroup>
+      <PackageReference Include="Freql.Sqlite" Version="0.4.1" />
       <PackageReference Include="FSharp.Compiler.Service" Version="40.0.0" />
     </ItemGroup>
 
