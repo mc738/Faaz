@@ -1,5 +1,6 @@
 ﻿namespace Faaz.ToolKit.Dev
 
+open System
 open Faaz
 
 [<RequireQualifiedAccess>]
@@ -24,4 +25,26 @@ module Git =
                 match errors.[0].StartsWith("Cloning into") with
                 | true -> Ok [ "Cloned" ]
                 | false -> Error errors
+    
+    let addTag (gitPath: string) (path: string) (tag:string) =
+        let output, errors =
+            Process.execute gitPath $"tag {tag}" (path |> Some)
+            
+        match errors.Length = 0 with
+        | true -> Ok output
+        | false -> Error "Tag not added"
 
+    let pushTag (gitPath: string) (path: string) (tag:string) =
+        let output, errors =
+            Process.execute gitPath $"push origin {tag}" (path |> Some)
+        // For whatever reason the results are returned in STDERR...    
+        
+        match errors.Length > 1 with
+        | true ->
+            match errors.[1].StartsWith(" * [new tag]") with
+            | true -> errors |> String.concat Environment.NewLine |> Ok
+            | false -> Error "Tag not added"
+        | false -> Error "Tag not added"
+
+
+    

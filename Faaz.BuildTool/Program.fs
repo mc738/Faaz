@@ -14,7 +14,11 @@ let main argv =
     
     match S3Context.Create("C:\\ProjectData\\s3_test\\s3_config-builds.json") with
     | Ok s3 ->
-        match ScriptHost.eval<int> "C:\\Users\\44748\\Projects\\Faaz\\Scripts\\BuildScripts.fsx" "BuildScripts.FDOM.run ()" fsi with
+        let major = 1
+        let minor = 1
+        let revision = 0
+        let command = $"BuildScripts.TestRepo.run {major} {minor} {revision}"
+        match ScriptHost.eval<int> "C:\\Users\\44748\\Projects\\Faaz\\Scripts\\BuildScripts.fsx" command fsi with
         | Ok _ -> 0
         | Error e ->
             printfn $"Error running build script: {e}"

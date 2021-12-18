@@ -42,6 +42,8 @@ module Process =
         if not started then
             failwithf $"Failed to start process {filename}"
         printfn $"Started {p.ProcessName} (pid: {p.Id})"
+        printfn $"\tArgs: {args}"
+        printfn $"\tId: {p.Id}"
         p.BeginOutputReadLine()
         p.BeginErrorReadLine()
         p.WaitForExit()

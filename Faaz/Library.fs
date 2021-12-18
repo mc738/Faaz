@@ -38,10 +38,10 @@ module Common =
                 is_warning INTEGER NOT NULL
             );"""
 
-    let log (qh: QueryHandler) step entry =
+    let log (context: SqliteContext) step entry =
         printfn $"{step} - {entry}"
 
-        qh.Insert(
+        context.Insert(
             "build_logs",
             { Step = step
               Entry = entry
@@ -49,12 +49,12 @@ module Common =
               IsWarning = false }
         )
 
-    let logError (qh: QueryHandler) step entry =
+    let logError (context: SqliteContext) step entry =
         Console.ForegroundColor <- ConsoleColor.Red
         printfn $"{step} - {entry}"
         Console.ResetColor()
 
-        qh.Insert(
+        context.Insert(
             "build_logs",
             { Step = step
               Entry = entry
@@ -62,7 +62,7 @@ module Common =
               IsWarning = false }
         )
 
-    let logWarning (qh: QueryHandler) step entry =
+    let logWarning (qh: SqliteContext) step entry =
         Console.ForegroundColor <- ConsoleColor.Yellow
         printfn $"{step} - {entry}"
         Console.ResetColor()
@@ -80,19 +80,19 @@ module Common =
           Name: string
           BasePath: string
           Data: Map<string, string>
-          Writer: QueryHandler }
+          Writer: SqliteContext }
 
         static member Create(id, name, basePath, data, initStatements) =
             attempt
                 (fun _ ->
-                    let qh =
-                        QueryHandler.Create(Path.Combine(basePath, "context.db"))
+                    let context =
+                        SqliteContext.Create(Path.Combine(basePath, "context.db"))
 
                     { Id = id
                       Name = name
                       BasePath = basePath
                       Data = data
-                      Writer = qh })
+                      Writer = context })
             |> fun scr ->
                 match scr with
                 | Ok sc ->
@@ -225,3 +225,12 @@ module ScriptHost =
         { FsiSession: FsiEvaluationSession }
 
         member hc.Eval<'T>(path, name) = eval<'T> path name hc.FsiSession
+        
+        /// Eval a script that will use a `ScriptContext` and returns it's path (or error)
+        member hc.EvalWithContext(path, name) =
+            match eval<Result<string, string>> path name hc.FsiSession with
+            | Ok r ->
+                match r with
+                | Ok scp -> SqliteContext.Open(scp) |> Ok
+                | Error e -> Error e
+            | Error e -> Error e

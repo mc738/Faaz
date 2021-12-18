@@ -9,6 +9,51 @@ open Faaz.Pipelines
 open Faaz.ToolKit.Dev
 open FStore
 
+module TestRepo =
+    let config =
+        ({ DotNetPath = "C:\\Program Files\\dotnet\\dotnet"
+           GitPath = "git"
+           SourceUrl = "https://github.com/mc738/TestRepo.git"
+           Name = "TestRepo"
+           Tests = []
+           Publishes = []
+           Packages = [
+               "TestRepo"
+           ]
+           Pushes = [
+               { Name = "TestRepo"; Source = "github" }
+           ]
+           OutputDirectory = "C:\\Builds"
+           Args = [
+               { Key = "s3-config-path"; Value = "C:\\ProjectData\\s3_test\\s3_config-builds.json" }
+               { Key = "s3-config-bucket"; Value = "builds" }               
+           ] }: BuildPipeline.Configuration)
+
+
+    let buildPipeline (config: BuildPipeline.Configuration) (version: BuildPipeline.Version) =
+        let pipeline =
+            fun _ -> BuildPipeline.initialize config version
+            >=> BuildPipeline.pack config
+            >=> BuildPipeline.push config
+            >=> BuildPipeline.createZip
+            >=> BuildPipeline.uploadBuildArtifact
+            //>=> BuildPipeline.cleanUp
+            >=> (fun bc -> BuildPipeline.getBuildArtifactName bc |> Ok) 
+                
+        match pipeline () with
+        | Ok r -> 0
+        | Error e -> -1
+    let run major minor revision =
+        let version =
+            ({ Major = major
+               Minor = minor
+               Revision = revision
+               Suffix = None }: BuildPipeline.Version)
+            
+        printfn $"*** Building `TestRepo`. Version: {version.Major}.{version.Minor}.{version.Revision} ***"
+        buildPipeline config version
+        
+
 module FDOM =
     let config =
         ({ DotNetPath = "C:\\Program Files\\dotnet\\dotnet"
@@ -24,6 +69,8 @@ module FDOM =
                "FDOM.Rendering.Html"
                "FDOM.Rendering.Razor"
            ]
+           Packages = []
+           Pushes = []
            OutputDirectory = "C:\\Builds"
            Args = [
                { Key = "s3-config-path"; Value = "C:\\ProjectData\\s3_test\\s3_config-builds.json" }

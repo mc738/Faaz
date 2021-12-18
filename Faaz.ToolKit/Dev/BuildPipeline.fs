@@ -16,7 +16,14 @@ module BuildPipeline =
           Key: string
           [<JsonPropertyName("value")>]
           Value: string }
-
+    
+    type Push = {
+        [<JsonPropertyName("name")>]
+        Name: string
+        [<JsonPropertyName("source")>]
+        Source: string
+    }
+    
     [<CLIMutable>]
     type Configuration =
         { [<JsonPropertyName("dotnet")>]
@@ -31,6 +38,10 @@ module BuildPipeline =
           Tests: string list
           [<JsonPropertyName("publishes")>]
           Publishes: string list
+          [<JsonPropertyName("packages")>]
+          Packages: string list
+          [<JsonPropertyName("pushes")>]
+          Pushes: Push list
           [<JsonPropertyName("outputDirectory")>]
           OutputDirectory: string
           [<JsonPropertyName("args")>]
@@ -67,6 +78,7 @@ module BuildPipeline =
                     latest_commit_hash TEXT NOT NULL,
                     signature TEXT NOT NULL
                    );"""
+        
 
         member bs.GetVersion() = $"{bs.Major}.{bs.Minor}.{bs.Revision}"
 
@@ -96,11 +108,10 @@ module BuildPipeline =
     let getSrcPath (sc: ScriptContext) = sc.GetValue("src-path", "")
 
     let getArtifactsPath (sc: ScriptContext) = sc.GetValue("artifacts-dir", "")
-
+    
     let getBuildArtifactName (bc: Context) = Path.Combine(bc.Script.BasePath, $"{bc.Stats.Name}.zip") 
     
     let tmpPath (sc: ScriptContext) = Path.Combine(sc.BasePath, ".tmp")
-
     
     let initializeDirectory (config: Configuration) basePath =
         printfn $"Initializing build directory (path: {basePath})."
@@ -112,6 +123,8 @@ module BuildPipeline =
         let resourcesDir = Path.Combine(tmpPath, "resources")
         let artifactsDir = Path.Combine(tmpPath, "artifacts")
         let srcDir = Path.Combine(tmpPath, "src")
+        let packageDir = Path.Combine(tmpPath, "packages")
+        let documentationDir = Path.Combine(tmpPath, "documentation")
 
         Directory.CreateDirectory(basePath) |> ignore
         Directory.CreateDirectory(tmpPath) |> ignore
@@ -120,13 +133,17 @@ module BuildPipeline =
         Directory.CreateDirectory(resourcesDir) |> ignore
         Directory.CreateDirectory(artifactsDir) |> ignore
         Directory.CreateDirectory(srcDir) |> ignore
-
+        Directory.CreateDirectory(packageDir) |> ignore
+        Directory.CreateDirectory(documentationDir) |> ignore
+    
         [ "tests-dir", testingDir
           "publish-dir", publishDir
           "resources-dir", resourcesDir
           "artifacts-dir", artifactsDir
           "src-dir", srcDir
-          "src-path", Path.Combine(srcDir, config.Name) ]
+          "src-path", Path.Combine(srcDir, config.Name)
+          "package-dir", packageDir
+          "document-dir", documentationDir ]
 
     let createContext (config: Configuration) (id: Guid) basePath paths =
         let args =
@@ -237,6 +254,14 @@ module BuildPipeline =
         sc.Log("run-publish", $"Publishing `{name}`.")
         DotNet.publish sc config.DotNetPath name
 
+    let runPack (config: Configuration) name (sc: ScriptContext) =
+        sc.Log("run-pack", $"Packing `{name}`.")
+        DotNet.pack sc config.DotNetPath name
+     
+    let runPush (config: Configuration) name source (sc: ScriptContext) =
+        sc.Log("run-push", $"Pushing `{name}` to `{source}`.")
+        DotNet.push sc config.DotNetPath name source
+        
     let test config (bc: Context) =
         bc.Script.Log("build-pipeline", "Running tests.")
 
@@ -282,6 +307,52 @@ module BuildPipeline =
         | Some e ->
             bc.Script.LogError("build-pipeline", $"Publish error: {e}")
             Error e
+            
+    let pack config (bc: Context) =
+        bc.Script.Log("build-pipeline", "Running pack.")
+
+        let publishError =
+            config.Packages
+            |> List.fold
+                (fun r p ->
+                    match r with
+                    | None ->
+                        match runPack config p bc.Script with
+                        | Ok _ -> None
+                        | Error e -> Some e
+                    | Some _ -> r)
+                None
+
+        match publishError with
+        | None ->
+            bc.Script.Log("build-pipeline", "Packing complete.")
+            Ok bc
+        | Some e ->
+            bc.Script.LogError("build-pipeline", $"Packing error: {e}")
+            Error e
+            
+    let push config (bc: Context) =
+        bc.Script.Log("build-pipeline", "Running pushes.")
+
+        let publishError =
+            config.Pushes
+            |> List.fold
+                (fun r p ->
+                    match r with
+                    | None ->
+                        match runPush config p.Name p.Source bc.Script with
+                        | Ok _ -> None
+                        | Error e -> Some e
+                    | Some _ -> r)
+                None
+
+        match publishError with
+        | None ->
+            bc.Script.Log("build-pipeline", "Pushes complete.")
+            Ok bc
+        | Some e ->
+            bc.Script.LogError("build-pipeline", $"Pushes error: {e}")
+            Error e
     
     let createZip (bc: Context) =
         let targetPath = tmpPath bc.Script
@@ -318,6 +389,22 @@ module BuildPipeline =
                 Error e
         | None, _ -> Error "Missing `s3-config-path` value. Try adding as an arg."
         | _, None -> Error "Missing `s3-config-bucket` value. Try adding as an arg."
+    
+    let addTag (config: Configuration) (bc: Context) =                
+        let version = $"v.{bc.Stats.Major}.{bc.Stats.Minor}.{bc.Stats.Revision}"
+        bc.Script.Log("build-pipeline", $"Added version tag to git. Tag: {version}")
+        match Git.addTag config.GitPath (getSrcPath bc.Script) version with
+        | Ok m ->
+            match Git.pushTag config.GitPath (getSrcPath bc.Script) version with
+            | Ok ok ->
+                bc.Script.Log("build-pipline", "Git tag added.")
+                Ok bc
+            | Error e ->
+                printfn $"error {e}"
+                Error e
+        | Error e ->
+            printfn $"error {e}"
+            Error e
         
     let cleanUp (bc: Context) =
         match attempt (fun _ -> Directory.Delete(tmpPath bc.Script, true)) with
@@ -326,4 +413,6 @@ module BuildPipeline =
             bc.Script.LogWarning("build-pipleline", $"Clean up failed. Error: {e}")
             Ok bc
             
-        
+    /// Finish the pipeline and return the build context path.
+    let finish (bc: Context) =
+        Path.Combine(Path.Combine(bc.Script.BasePath, "context.db")) |> Ok
