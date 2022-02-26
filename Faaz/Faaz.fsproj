@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <WarnOn>3390;$(WarnOn)</WarnOn>
         <PackageProjectUrl>https://github.com/mc738/Faaz</PackageProjectUrl>
@@ -9,17 +9,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Library.fs" />
-        <Compile Include="Http.fs" />
-        <Compile Include="Json.fs" />
-        <Compile Include="IO.fs" />
-        <Compile Include="Process.fs" />
-        <Compile Include="Utils.fs" />
+        <Compile Include="Common.fs" />
+        <Compile Include="Pipelines.fs" />
+        <Compile Include="ScriptHost.fs" />
+        <Compile Include="Messaging.fs" />
+        <Compile Include="Agent.fs" />
+        <Compile Include="ScriptingContext.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Freql.Sqlite" Version="0.4.2" />
       <PackageReference Include="FSharp.Compiler.Service" Version="41.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Fipc\Fipc.Core\Fipc.Core.fsproj" />
+      <ProjectReference Include="..\..\Fipc\Fipc.Messaging\Fipc.Messaging.fsproj" />
     </ItemGroup>
 
 </Project>
