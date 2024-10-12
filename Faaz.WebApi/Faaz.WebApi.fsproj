@@ -2,18 +2,24 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <WarnOn>3390;$(WarnOn)</WarnOn>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Routes.fs" />
         <Compile Include="Program.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <Content Include=".dockerignore" />
       <Content Include="Dockerfile" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Giraffe" Version="5.0.0" />
+      <PackageReference Include="Peeps" Version="0.5.0" />
+      <PackageReference Include="Peeps.Monitoring" Version="0.5.0" />
     </ItemGroup>
 
     <ItemGroup>
