@@ -1,5 +1,8 @@
 ﻿namespace Faaz
 
+open Fipc.Core.Common
+open Microsoft.Build.Tasks
+
 
 [<AutoOpen>]
 module Common =
@@ -11,7 +14,7 @@ module Common =
         try
             fn () |> Ok
         with
-        | exn -> Error exn.Message
+        | exn ->  Result.Error exn.Message
 
     let tee fn x =
         fn x
@@ -37,8 +40,9 @@ module Common =
                 is_warning INTEGER NOT NULL
             );"""
 
-    let log (context: SqliteContext) step entry =
-        printfn $"{step} - {entry}"
+    let log (context: SqliteContext) (writer: FipcConnectionWriter) step entry =
+        //printfn $"{step} - {entry}"
+        writer.TryPostMessage <| FipcMessage.StringMessage($"{step} - {entry}") |> ignore
 
         context.Insert(
             "build_logs",
@@ -48,10 +52,12 @@ module Common =
               IsWarning = false }
         )
 
-    let logError (context: SqliteContext) step entry =
-        Console.ForegroundColor <- ConsoleColor.Red
-        printfn $"{step} - {entry}"
-        Console.ResetColor()
+    let logError (context: SqliteContext) (writer: FipcConnectionWriter) step entry =
+        //Console.ForegroundColor <- ConsoleColor.Red
+        //printfn $"{step} - {entry}"
+        writer.TryPostMessage <| FipcMessage.StringMessage($"{step} - Error: {entry}") |> ignore
+
+        //Console.ResetColor()
 
         context.Insert(
             "build_logs",
@@ -61,10 +67,11 @@ module Common =
               IsWarning = false }
         )
 
-    let logWarning (qh: SqliteContext) step entry =
-        Console.ForegroundColor <- ConsoleColor.Yellow
-        printfn $"{step} - {entry}"
-        Console.ResetColor()
+    let logWarning (qh: SqliteContext) (writer: FipcConnectionWriter) step entry =
+        //Console.ForegroundColor <- ConsoleColor.Yellow
+        writer.TryPostMessage <| FipcMessage.StringMessage($"{step} - Warning: {entry}") |> ignore
+        //printfn $"{step} - {entry}"
+        //Console.ResetColor()
 
         qh.Insert(
             "build_logs",
@@ -79,9 +86,10 @@ module Common =
           Name: string
           BasePath: string
           Data: Map<string, string>
-          Writer: SqliteContext }
+          Writer: SqliteContext
+          LogWriter: FipcConnectionWriter }
 
-        static member Create(id, name, basePath, data, initStatements) =
+        static member Create(id, name, basePath, data, initStatements, logger: FipcConnectionWriter) =
             attempt
                 (fun _ ->
                     let context =
@@ -91,14 +99,15 @@ module Common =
                       Name = name
                       BasePath = basePath
                       Data = data
-                      Writer = context })
+                      Writer = context
+                      LogWriter = logger })
             |> fun scr ->
                 match scr with
                 | Ok sc ->
                     match sc.Initialize(initStatements) with
                     | Ok _ -> Ok sc
-                    | Error e -> Error $"Failed to initialize script context. Error: {e}"
-                | Error e -> Error e
+                    | Error e -> Result.Error $"Failed to initialize script context. Error: {e}"
+                | Error e -> Result.Error e
 
         member sc.Initialize(initSql: string list) =
             attempt
@@ -107,11 +116,11 @@ module Common =
                     |> List.map sc.Writer.ExecuteSqlNonQuery
                     |> ignore)
 
-        member sc.Log(step, entry) = log sc.Writer step entry
+        member sc.Log(step, entry) = log sc.Writer sc.LogWriter step entry
 
-        member sc.LogError(step, entry) = logError sc.Writer step entry
+        member sc.LogError(step, entry) = logError sc.Writer sc.LogWriter step entry
 
-        member sc.LogWarning(step, entry) = logWarning sc.Writer step entry
+        member sc.LogWarning(step, entry) = logWarning sc.Writer sc.LogWriter step entry
 
         member sc.TryGetValue(key) = sc.Data.TryFind key
 

@@ -9,22 +9,29 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Messaging.fs" />
         <Compile Include="Common.fs" />
         <Compile Include="Pipelines.fs" />
         <Compile Include="ScriptHost.fs" />
-        <Compile Include="Messaging.fs" />
         <Compile Include="Agent.fs" />
         <Compile Include="ScriptingContext.fs" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Freql.Sqlite" Version="0.4.2" />
+      <PackageReference Include="Freql.Sqlite" Version="0.9.1" />
       <PackageReference Include="FSharp.Compiler.Service" Version="41.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\..\Fipc\Fipc.Core\Fipc.Core.fsproj" />
       <ProjectReference Include="..\..\Fipc\Fipc.Messaging\Fipc.Messaging.fsproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Microsoft.Extensions.Logging.Abstractions, Version=6.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60">
+        <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\6.0.0\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

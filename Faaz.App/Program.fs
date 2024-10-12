@@ -43,18 +43,19 @@ let main argv =
     //let config = Messaging.createConfiguration "test-faaz" pipeName
     //let streamServer = Server.startStreamServer config
     let reader = Messaging.createServer "server" pipeName
-
+    
     let fsi = ScriptHost.fsiSession ()
 
     let ctx = ({ FsiSession = fsi }: HostContext)
 
-    let agent = HostAgent(ctx)
+    
+    
+    //let agent = HostAgent(ctx)
 
-
-    agent.RunScript(
-        "C:\\Users\\44748\\Projects\\Faaz\\Faaz.TestScripts\\TestScript.fsx",
-        $"TestScript.test \"{pipeName}\""
-    )
+    //agent.RunScript(
+    //    "C:\\Users\\44748\\Projects\\Faaz\\Faaz.TestScripts\\TestScript.fsx",
+    //    $"TestScript.test \"{pipeName}\""
+    //)
 
     // Start the agent.
 
