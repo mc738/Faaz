@@ -15,13 +15,19 @@
         <Compile Include="ScriptHost.fs" />
         <Compile Include="Agent.fs" />
         <Compile Include="ScriptingContext.fs" />
+        <Folder Include="V1\Core\" />
+        <Folder Include="V1\FSharp\Core\" />
+        <Folder Include="V1\FSharp\Fsi\" />
+        <Compile Include="V1\FSharp\Compiled\Compiler.fs" />
+        <Compile Include="V1\FSharp\Compiled\Loader.fs" />
+        <Compile Include="V1\FSharp\Compiled\Extractor.fs" />
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Freql.Sqlite" Version="0.9.1" />
-      <PackageReference Include="FSharp.Compiler.Service" Version="43.8.401" />
+      <PackageReference Include="FSharp.Compiler.Service" Version="43.9.300" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-      <PackageReference Update="FSharp.Core" Version="8.0.401" />
+      <PackageReference Update="FSharp.Core" Version="9.0.300" />
     </ItemGroup>
 
     <ItemGroup>
