@@ -2,7 +2,6 @@
 
 open Faaz.ScriptHost
 open Fipc.Core.Common
-open Microsoft.Build.Framework
 open Microsoft.Extensions.Logging
 
 [<RequireQualifiedAccess>]
@@ -58,7 +57,6 @@ module Agent =
         logger.LogInformation $"Starting example listener loop."
         testLoop ()
         ()
-
 
     let runInBackground (fn) v = async { return fn v } |> Async.Start
 

@@ -1,7 +1,6 @@
 ﻿namespace Faaz
 
 open Fipc.Core.Common
-open Microsoft.Build.Tasks
 
 
 [<AutoOpen>]
