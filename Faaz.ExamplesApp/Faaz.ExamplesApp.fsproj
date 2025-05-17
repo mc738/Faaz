@@ -9,10 +9,15 @@
         <None Include="Scripts\FSharp\HelloWorld.fsx" />
         <None Include="Scripts\FSharp\ComplexScript.fsx" />
         <Compile Include="Program.fs" />
+        <Content Include="appsettings.json">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 
     <ItemGroup>
       <PackageReference Update="FSharp.Core" Version="9.0.300" />
+      <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+      <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
