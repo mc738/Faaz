@@ -5,3 +5,5 @@ let run (name: string option) =
     | None -> printfn "Hello, World!"
     
 let run1 (name: string) = printfn $"Hello, {name}!"
+
+let run2 (name: string) = ()
