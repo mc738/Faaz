@@ -29,6 +29,28 @@ module Extractor =
             | [] -> Error ""
             | _ -> Error ""
 
+        let getMemberInfoByAttribute<'T when 'T :> Attribute>
+            (fullQualifiedTypeName: string)
+            (assembly: Assembly)
+            (bindingFlags: BindingFlags)
+            =
+            let candidates =
+                assembly.GetTypes()
+                |> Seq.where (fun t -> t.FullName = fullQualifiedTypeName)
+                |> Seq.toList
+
+            let hasAttribute (methodInfo: MethodInfo) =
+                methodInfo.GetCustomAttribute(typeof<'T>) |> Option.ofObj |> Option.isSome
+
+            match candidates with
+            | [ t ] ->
+                match t.GetMethods() |> Array.where hasAttribute |> Array.tryHead with
+                | None -> Error ""
+                | Some memberInfo -> Ok memberInfo
+            | [] -> Error ""
+            | _ -> Error ""
+
+
         let extractor<'r> name assembly parameters =
             match getMemberInfo name assembly defaultBindingFlags with
             | Ok memberInfo ->
@@ -47,7 +69,7 @@ module Extractor =
                             )
                             :> Expression
 
-                    Expression.Lambda (expression, parameters)
+                    Expression.Lambda(expression, parameters)
 
                 let systemFunc = lambda.Compile()
 
@@ -80,6 +102,15 @@ module Extractor =
             |> extractor<'TResult> name assembly
             |> Result.map (fun systemFunc -> systemFunc :?> Func<'T1, 'T2, 'T3, 'T4, 'TResult> |> FuncConvert.FromFunc)
 
+        let extractFunction5<'T1, 'T2, 'T3, 'T4, 'T5, 'TResult> name (assembly: Assembly) =
+            [| Expression.Parameter(typeof<'T1>)
+               Expression.Parameter(typeof<'T2>)
+               Expression.Parameter(typeof<'T3>)
+               Expression.Parameter(typeof<'T4>)
+               Expression.Parameter(typeof<'T5>) |]
+            |> extractor<'TResult> name assembly
+            |> Result.map (fun systemFunc ->
+                systemFunc :?> Func<'T1, 'T2, 'T3, 'T4, 'T5, 'TResult> |> FuncConvert.FromFunc)
 
     type FunctionExtractor(assembly: Assembly) =
 
@@ -89,11 +120,11 @@ module Extractor =
         member _.TryGetFunction<'T1, 'T2, 'TResult>(name) =
             Internal.extractFunction2<'T1, 'T2, 'TResult> name assembly
 
-        member _.TryGetFunction<'T1, 'T2,'T3, 'TResult>(name) =
-            Internal.extractFunction3<'T1, 'T2,'T3, 'TResult> name assembly
+        member _.TryGetFunction<'T1, 'T2, 'T3, 'TResult>(name) =
+            Internal.extractFunction3<'T1, 'T2, 'T3, 'TResult> name assembly
 
         member _.TryGetFunction<'T1, 'T2, 'T3, 'T4, 'TResult>(name) =
             Internal.extractFunction4<'T1, 'T2, 'T3, 'T4, 'TResult> name assembly
 
-       
-        
+        member _.TryGetFunction<'T1, 'T2, 'T3, 'T4, 'T5, 'TResult>(name) =
+            Internal.extractFunction5<'T1, 'T2, 'T3, 'T4, 'T5, 'TResult> name assembly
