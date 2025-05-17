@@ -51,7 +51,7 @@ module Compiler =
     type HashType =
         | MD5
         | SHA256
-        
+
     [<AutoOpen>]
     module private Internal =
 
@@ -100,36 +100,53 @@ module Compiler =
                     // This will likely cause a re-compilation,
                     // but that is not an issue.
                     None)
-            
+
         let hashFile (hasher: HashAlgorithm) (path: string) =
             use fs = File.OpenRead path
-            
+
             hasher.ComputeHash(fs)
             |> fun hashBytes -> BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant()
-            
-            //hasher.ComputeHashAsync
-            //
-            //use crypto = new CryptoStream(fs, hasher, CryptoStreamMode.Read)
-            //
-            ////do! File.ReadAllBytesAsync(path) |> hasher.ComputeHashAsync
-            //
-            //File.ReadAllBytes(path)  
-        
+
+        //hasher.ComputeHashAsync
+        //
+        //use crypto = new CryptoStream(fs, hasher, CryptoStreamMode.Read)
+        //
+        ////do! File.ReadAllBytesAsync(path) |> hasher.ComputeHashAsync
+        //
+        //File.ReadAllBytes(path)
+
         let p (path: string) = Path.IsPathFullyQualified(path)
-        
+
         //let p (path: string) = Path.getf
-            
-            
+
         let generateHash (scriptPath: string) =
-            
+
             let hasher = SHA256.Create()
-            
-            
+
             let rec traverse (path: string) =
-                ()
-            
-            
-            ()
+                let fileDirectory = Path.GetDirectoryName(path)
+
+                let getDependencyPath (path: string) = Path.GetFullPath(path, fileDirectory)
+
+                // Get The file hash
+                let fileHash = hashFile hasher path
+
+                let dependencyHashes =
+                    getDependencies path
+                    |> Seq.map (function
+                        | ScriptDependencyType.Script scriptPath -> getDependencyPath scriptPath |> traverse
+                        | ScriptDependencyType.Dll dllPath -> hashFile hasher dllPath
+                        | ScriptDependencyType.Nuget nugetPath ->
+                            // TODO nuget not supported yet - for now just generate a random guid
+                            Guid.NewGuid().ToString("n"))
+
+                seq {
+                    fileHash
+                    yield! dependencyHashes
+                }
+                |> String.concat ""
+
+            traverse scriptPath
 
     // NOT supported in the lastest version of FSC
     //let compileScriptToDynamicAssemblyAsync (cfg: CompilerConfiguration) (path: string) =
