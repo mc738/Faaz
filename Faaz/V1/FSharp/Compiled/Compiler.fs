@@ -209,6 +209,21 @@ module Compiler =
 
             traverse scriptPath |> hasher.ComputeHash |> bytesToString
 
+        /// Extracts the hash and timestamp from the provided filename if it matches the expected format.
+        /// The filename is expected to follow the pattern: `<name>___<hash>_<yyyyMMddHHmmss>.dll`.
+        /// This function extracts the `hash` and `timestamp` from the filename and returns a record
+        /// containing the full file path, the hash, and the timestamp. If the timestamp cannot be parsed,
+        /// the file's creation time in UTC is used as a fallback.
+        ///
+        /// If the filename does not match the expected format, the function returns `None`.
+        ///
+        /// Parameters:
+        ///   fileInfo: FileInfo representing the file to extract metadata from.
+        ///
+        /// Returns:
+        ///   Option<{| FilePath: string; Hash: string; Timestamp: DateTime |}>:
+        ///     Returns `Some` with the extracted hash, timestamp, and file path if parsing is successful,
+        ///     or `None` if the filename format does not match.
         let ``get previous hash and timestamp from file name`` (fileInfo: FileInfo) =
             let m = fileNameHashRegex.Match(fileInfo.Name)
 
@@ -288,6 +303,27 @@ module Compiler =
     //    | _ -> return errors |> Error
     //}
     //
+    /// Asynchronously compiles an F# script file (.fsx) into a DLL.
+    ///
+    /// This function takes a `CompilerContext` and a path to a script file, then
+    /// performs the following steps:
+    /// - Validates that the file extension matches .fsx.
+    /// - Checks for changes to the script by comparing hashes of previous compiled versions.
+    /// - If no changes are detected, skips recompilation and returns the path to the previously compiled DLL.
+    /// - If changes are detected, generates a new DLL with the script, using the specified output path in the configuration.
+    ///
+    /// Parameters:
+    /// - `ctx`: The context containing the F# compiler, logging infrastructure, and other configuration settings.
+    /// - `scriptPath`: The path to the F# script file to be compiled.
+    ///
+    /// Returns:
+    /// - An asynchronous computation that, upon completion, will yield:
+    ///   - `Ok dllPath` if the script compilation is successful or if no changes are detected, where `dllPath` is the path to the resulting DLL.
+    ///   - `Error` with a reason if the script compilation fails or the file type is invalid.
+    ///
+    /// Notes:
+    /// - Files that do not have the .fsx extension are rejected as invalid file types.
+    /// - If the script has not been modified and the hash matches a previously compiled version, recompilation is skipped.
     let compileScriptAsync (ctx: CompilerContext) (scriptPath: string) =
         async {
 
